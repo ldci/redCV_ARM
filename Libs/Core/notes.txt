@@ -1,0 +1,5 @@
+handles are now ptr-value!
+So init is handle/value: as int-ptr! 0
+then
+pix: image/acquire-buffer src as ptr-ptr! :handle
+image/release-buffer src handle/value no or yes

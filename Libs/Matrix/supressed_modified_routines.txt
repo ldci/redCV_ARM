@@ -1,0 +1,132 @@
+
+rcvSetIntValue: routine [
+	p		[integer!] ; address of mat element as integer
+	value	[integer!]
+	unit	[integer!] ; size of integer 8 16 32 [1 2 4]
+	/local
+	pt [int-ptr!]	
+] [
+	pt: as int-ptr! p
+    pt/value: switch unit [
+		1 [value and FFh or (pt/value and FFFFFF00h)]
+		2 [value and FFFFh or (pt/value and FFFF0000h)]
+		4 [value]
+	]
+]
+
+
+rcvGetFloatValue: routine [
+	p		[integer!] ; address of mat element as integer
+	return:	[float!]
+	/local
+	pt64	[float-ptr!]
+] [
+	pt64: as float-ptr! p
+	pt64/value				
+]
+
+rcvGetFloat32Value: routine [
+	p		[integer!] ; address of mat element as integer
+	return:	[float!]
+	/local
+	pt32	[float32-ptr!]	
+] [
+	;vector/get-value-float as byte-ptr! p 4 
+	pt32: as float32-ptr! p
+	as float! pt32/value
+]
+
+rcvSetFloatValue: routine [
+	p		[integer!] ; address of mat element as integer address
+	f		[float!]
+	unit	[integer!] ; size of float 32 64  [4 8]
+	/local
+	pt64 	[pointer! [float!]]
+	pt32	[pointer! [float32!]]
+	
+][
+	either unit = 8 [
+					pt64: as float-ptr! p
+					pt64/value: f
+				][
+					pt32: as float32-ptr! p
+					pt32/value: as float32! f
+	]
+]
+
+_rcvSetFloat2D: routine [
+    "Set float matrix value"
+    mObj        [object!]
+    x           [integer!]
+    y           [integer!]
+    val         [float!]
+    /local
+    vec         [red-vector!]
+    width       [integer!]
+    mvalue      [byte-ptr!]
+    unit        [integer!]
+    idx         [integer!]
+    p           [byte-ptr!]
+][
+    vec: mat/get-data mObj
+    unit: mat/get-unit mObj
+    width: mat/get-cols mObj
+    mvalue: vector/rs-head vec
+    
+    idx: (y - 1) * width + x
+    idx: (idx - 1) * unit
+    
+    p: mvalue + idx
+    
+    ; Écriture selon la taille (32 ou 64 bits)
+    either unit = 4 [
+        as float-ptr! p/value: as float! val
+    ][
+        as float64-ptr! p/value: val
+    ]
+]
+
+
+;--color matrices: only 32-bit
+rcvImage2Mat32: routine [
+"Red Image to 32-bit integer 2-D Matrix "
+    src     [image!]
+    mObj    [object!]
+    /local
+    pix     [int-ptr!]
+    dvalue  [byte-ptr!]
+    vec     [red-vector!]
+    handle1 [ptr-value!]
+    unit    [integer!]
+    h       [integer!]
+    w       [integer!]
+    x       [integer!]
+    y       [integer!]
+    p4      [int-ptr!]
+] [
+    handle1/value: as int-ptr! 0
+    pix: image/acquire-buffer src as ptr-ptr! :handle1
+    w: IMAGE_WIDTH(src/size) 
+    h: IMAGE_HEIGHT(src/size) 
+    vec: mat/get-data mObj
+    unit: mat/get-unit mObj
+    dvalue: vector/rs-head vec
+    y: 0 
+    while [y < h] [
+        x: 0
+        while [x < w][
+            p4: as int-ptr! (dValue)           ;-- parenthèses comme dans la version qui marche
+            p4/value: switch unit [
+                1 [pix/value and FFh or (p4/value and FFFFFF00h)]
+                2 [pix/value and FFFFh or (p4/value and FFFF0000h)]
+               4 [pix/value]
+            ]
+            pix: pix + 1
+            dValue: dValue + unit
+            print [x y]
+            x: x + 1
+        ]
+        y: y + 1
+    ]
+    image/release-buffer src handle1/value no
+]
