@@ -311,39 +311,93 @@ _ySMGradient: routine [
     sum
 ]
 
-; Sobel Edges detector; pb la routine appelle deux autres routines -> plantage
+
 _rcvSobelMat: routine [
-"Fast Sobel on Matrix"
-    src  	[vector!]
-    dst  	[vector!]
-    mSize	[pair!]
+    "Fast Sobel on Matrix"
+    src     [vector!]
+    dst     [vector!]
+    mSize   [pair!]
     /local
-    s						[series!]
-    svalue dvalue idx		[byte-ptr!]
-    h w x y gx gy sum unit	[integer!]
+        svalue dvalue idx   [int-ptr!]
+        h w cx cy x y       [integer!]
+        gx gy sum v         [integer!]
 ][
-    ;get mat size will be improved in future with matrix! type
+    svalue: as int-ptr! vector/rs-head src
+    dvalue: as int-ptr! vector/rs-head dst
+    
     w: mSize/x
     h: mSize/y
-	svalue: vector/rs-head src   ; get byte pointer address of the source matrix first value
-	dvalue: vector/rs-head dst	; a byte ptr
-	s: GET_BUFFER(src)
-	unit: GET_UNIT(s)
-    y: gX: gY: sum: 0
-    while [y < h] [
-    	x: 0	
-       	while [x < w][
-    		gx: _xSMGradient as integer! svalue mSize x y
-    		gy: _ySMGradient as integer! svalue mSize x y
-    		sum: gX + gY ; faster approximation but requires absolute difference
-    		;sum: as integer! (sqrt ((as float! gx * gx) + (as float! gy * gy)))
-    		if sum < 0   [sum:  0]
-    		if sum > 255 [sum: 255]
-    		dvalue/value: as-byte sum
-        	dvalue: dvalue + unit
-        	x: x + 1
-       ]
-       y: y + 1
+
+    cy: 0
+    while [cy < h] [
+        cx: 0
+        while [cx < w] [
+            x: cx 
+            y: cy
+            
+            ; --- Gestion des bords (wrap-around) ---
+            if x < 1 [x: w - 1]
+            if y < 1 [y: h - 1]
+            if x >= (w - 1) [x: 1]
+            if y >= (h - 1) [y: 1]
+            
+            ; --- Calcul X Gradient (gx) ---
+            sum: 0
+            
+            idx: svalue + (((y - 1) * w) + (x - 1))
+            sum: sum + idx/value
+            
+            idx: svalue + ((y * w) + (x - 1))
+            sum: sum + (idx/value * 2)
+            
+            idx: svalue + (((y + 1) * w) + (x - 1))
+            sum: sum + idx/value
+            
+            idx: svalue + (((y - 1) * w) + (x + 1))
+            sum: sum - idx/value
+            
+            idx: svalue + ((y * w) + (x + 1))
+            sum: sum - (idx/value * 2)
+            
+            idx: svalue + (((y + 1) * w) + (x + 1))
+            sum: sum - idx/value
+            gx: sum
+            
+            ; --- Calcul Y Gradient (gy) ---
+            sum: 0
+            
+            idx: svalue + (((y - 1) * w) + (x - 1))
+            sum: sum + idx/value
+            
+            idx: svalue + (((y - 1) * w) + x)
+            sum: sum + (idx/value * 2)
+            
+            idx: svalue + (((y - 1) * w) + (x + 1))
+            sum: sum + idx/value
+            
+            idx: svalue + (((y + 1) * w) + (x - 1))
+            sum: sum - idx/value
+            
+            idx: svalue + (((y + 1) * w) + x)
+            sum: sum - (idx/value * 2)
+            
+            idx: svalue + (((y + 1) * w) + (x + 1))
+            sum: sum - idx/value
+            gy: sum
+            
+            ; --- Résultat final ---
+            ;v: abs gx + abs gy 
+            ; --- Résultat final ---
+			gx: either gx < 0 [0 - gx][gx]
+			gy: either gy < 0 [0 - gy][gy]
+			v: gx + gy
+            
+            dvalue/value: v
+            dvalue: dvalue + 1
+            
+            cx: cx + 1
+        ]
+        cy: cy + 1
     ]
 ]
 
@@ -446,6 +500,7 @@ rcvConvolveNormalizedMat: function [
 	_mx			[object!]
 	mSize		[pair!]
 ][
+	;--type 2: integer matrices
 	if all [mxS/type = 2 mxD/type = 2 matrix/_matSizeEQ? mxS mxD][
 		mSize: as-pair  mxS/cols mxS/rows
 		_rcvConvolveNormalizedMat mxS/data mxD/data mSize kernel factor delta
@@ -455,8 +510,10 @@ rcvConvolveNormalizedMat: function [
 rcvSobelMat: function [
 "Fast Sobel on Matrix"
 	mxS			[object!] 
-	mxD			[object!] 
+	mxD			[object!]
+	/local mSize [pair!] 
 ][
+	;--type 2: integer matrices
 	if all [mxS/type = 2 mxD/type = 2 matrix/_matSizeEQ? mxS mxD][
 		mSize: as-pair  mxS/cols mxS/rows
 		_rcvSobelMat mxS/data mxD/data mSize
@@ -470,7 +527,9 @@ rcvMatrixMedianFilter: function [
 	kWidth 		[integer!];--kernel rows
     kHeight		[integer!];--kernel columns 
     kernel 		[vector!] ;--for convolution
+    /local mSize [pair!]
 ][
+	;--type 2: integer matrices
 	if all [mxS/type = 2 mxD/type = 2 matrix/_matSizeEQ? mxS mxD][
 		mSize: as-pair  mx/cols mx/rows
 		_rcvMatrixMedianFilter mxS/data _mxD/data mSize kWidth kHeight kernel

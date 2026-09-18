@@ -1,5 +1,0 @@
-ces routines font appel à rcvConvolutionMat.red et causent problème.
-rcvSobelMat
-rcvConvolveMat
-rcvConvolveNormalizedMat
-
