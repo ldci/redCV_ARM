@@ -50,58 +50,57 @@ rcvMakeGradient: routine [
     	s								[series!]
     	p4          					[int-ptr!]
 ][
-	w: size/x
-	h: size/y
+	w: size/x 
+	h: size/y 
 	vecS: mat/get-data src
 	vecD: mat/get-data dst
 	sValue: vector/rs-head vecS  			
 	dValue: vector/rs-head vecD	
 	s: GET_BUFFER(vecS)
 	unit: GET_UNIT(s)		
-	w: w - 2
-    h: h - 2
     maxGradient: 0			
     idx:  svalue
     idx2: dvalue
     
     ; Similar to Sobel filter
-    y: 0
-    while [y < h] [
-    	x: 0
-		while [x < w][
-        		idx: sValue + (((y * w) + x) * unit)       
-        		p00: vector/get-value-int as int-ptr! idx unit 
-        		idx: sValue + ((((y + 1) * w) + x) * unit) 
-        		p01: vector/get-value-int as int-ptr! idx unit 
-        		idx: sValue + ((((y + 2) * w) + x) * unit) 
-        		p02: vector/get-value-int as int-ptr! idx unit 
-        		idx: sValue + (((y * w) + (x + 1)) * unit) 
-        		p10: vector/get-value-int as int-ptr! idx unit 
-        		idx: sValue + ((((y + 2) * w) + (x + 1)) * unit) 
-        		p12: vector/get-value-int as int-ptr! idx unit 
-        		idx: sValue + ((((y) * w) + (x + 2)) * unit) 
-        		p20: vector/get-value-int as int-ptr! idx unit 
-        		idx: sValue + ((((y + 1) * w) + (x + 2)) * unit)
-        		p21: vector/get-value-int as int-ptr! idx unit 
-        		idx: sValue + ((((y + 2) * w) + (x + 2)) * unit)
-        		p22: vector/get-value-int as int-ptr! idx unit 
-        		sx: as float! (p20 + (2 * p21) + p22) - (p00 + (2 * p01) + p02)
-        		sy: as float! (p02 + (2 * p12) + p22) - (p00 + (2 * p10) + p10)
-        		snorm: sqrt  ((sx * sx) + (sy * sy))
-        		v: as integer! snorm
-        		maxGradient: maxInt maxGradient v
-        		; update dst
-        		idx2: dValue + ((((y + 1) * w) + (x + 1)) * unit)
-        		;rcvSetIntValue as integer! idx2 v unit
-        		p4: as int-ptr! idx2
-        		p4/value: switch unit [
-        			1 [v and FFh or (p4/value and FFFFFF00h)]
-        			2 [v and FFFFh or (p4/value and FFFF0000h)]
-        			4 [v]
-    			]
-				x: x + 1
-		]
-		y: y + 1
+        y: 0
+    while [y < (h - 2)] [
+        x: 0
+        while [x < (w - 2)][
+            idx: sValue + (((y * w) + x) * unit)       
+            p00: vector/get-value-int as int-ptr! idx unit 
+            idx: sValue + ((((y + 1) * w) + x) * unit) 
+            p01: vector/get-value-int as int-ptr! idx unit 
+            idx: sValue + ((((y + 2) * w) + x) * unit) 
+            p02: vector/get-value-int as int-ptr! idx unit 
+            idx: sValue + (((y * w) + (x + 1)) * unit) 
+            p10: vector/get-value-int as int-ptr! idx unit 
+            idx: sValue + ((((y + 2) * w) + (x + 1)) * unit) 
+            p12: vector/get-value-int as int-ptr! idx unit 
+            idx: sValue + ((((y) * w) + (x + 2)) * unit) 
+            p20: vector/get-value-int as int-ptr! idx unit 
+            idx: sValue + ((((y + 1) * w) + (x + 2)) * unit)
+            p21: vector/get-value-int as int-ptr! idx unit 
+            idx: sValue + ((((y + 2) * w) + (x + 2)) * unit)
+            p22: vector/get-value-int as int-ptr! idx unit 
+            
+            sx: as float! (p20 + (2 * p21) + p22) - (p00 + (2 * p01) + p02)
+            sy: as float! (p02 + (2 * p12) + p22) - (p00 + (2 * p10) + p20) ;-- p20 au lieu du 2eme p10
+            snorm: sqrt ((sx * sx) + (sy * sy))
+            v: as integer! snorm
+            maxGradient: maxInt maxGradient v
+            
+            ; update dst
+            idx2: dValue + ((((y + 1) * w) + (x + 1)) * unit) ;-- écrit au centre du noyau
+            p4: as int-ptr! idx2
+            p4/value: switch unit [
+                1 [v and FFh or (p4/value and FFFFFF00h)]
+                2 [v and FFFFh or (p4/value and FFFF0000h)]
+                4 [v]
+            ]
+            x: x + 1
+        ]
+        y: y + 1
 	]
     maxGradient
 ]
@@ -120,6 +119,7 @@ rcvMakeBinaryGradient: routine [
     	sValue sTail dValue	[byte-ptr!]	
     	v scale unit		[integer!]
     	s					[series!]
+    	p4					[int-ptr!]
 ][
 	vecS: mat/get-data src
 	vecD: mat/get-data bingradient
@@ -130,12 +130,20 @@ rcvMakeBinaryGradient: routine [
 	unit: GET_UNIT(s)	
     scale: threshold * maxG / 100
     while [svalue < sTail] [
-    		v: vector/get-value-int as int-ptr! sValue unit
-    		either  (v > scale) [dValue/value: #"^(01)"] ;as byte! 1 
-								[dValue/value: #"^(00)"] ;as byte! 0
-    		sValue: sValue + unit
-			dValue: dValue + unit
-    ]  
+        v: vector/get-value-int as int-ptr! sValue unit
+        v: either (v > scale) [1] [0]  ;-- v contient 0 ou 1
+        ;mat/rcvSetIntValue as integer! dValue v unit
+        ;-- Écriture propre de l'entier
+        p4: as int-ptr! as integer! dValue
+        p4/value: switch unit [
+            1 [v and FFh or (p4/value and FFFFFF00h)]
+            2 [v and FFFFh or (p4/value and FFFF0000h)]
+            4 [v]
+        ]
+        
+        sValue: sValue + unit
+        dValue: dValue + unit
+    ]
 ]
 
 ; 2 integer matrices and 1 image
@@ -292,79 +300,78 @@ rcvChamferNormalize: routine [
 ;outside the object (-1.0)  distance to be computed
 
 _initDistance: routine [
-	input 		[vector!] 
-	output 		[vector!]
-	/local
-		mValueIN mTailIN mValueOUT	[byte-ptr!]
-		unit1 unit2					[integer!]
-		s							[series!]
-		p           				[byte-ptr!]
-		pt64        				[float-ptr!]
-    	pt32        				[float32-ptr!]
+    input       [vector!] 
+    output      [vector!]
+    /local
+        mValueIN mTailIN mValueOUT  [byte-ptr!]
+        unit1 unit2                 [integer!]
+        s                           [series!]
+        p                           [byte-ptr!]
+        pt64                        [float-ptr!]
+        pt32                        [float32-ptr!]
 ] [
-	mValueIN: vector/rs-head input
-	mTailIN: vector/rs-tail input
-	mValueOUT: vector/rs-head output
-	s: GET_BUFFER(input)
-	unit1: GET_UNIT(s)	
-	s: GET_BUFFER(output)
-	unit2: GET_UNIT(s)	
-	while [mValueIN < mTailIN] [
-		either ((vector/get-value-float mValueIN unit1)  = 1.0) 	
-					[
-					;rcvSetFloatValue as integer! mValueOUT 0.0 unit2
-						p: mValueOUT
-						either unit2 = 8 [
-        					pt64: as float-ptr! p
-        					pt64/value: 0.0
-   						 ][
-        					pt32: as float32-ptr! p
-        					pt32/value: as float32! 0.0
-    					]
-					] 
-					[
-						;rcvSetFloatValue as integer! mValueOUT -1.0 unit2
-						p: mValueOUT
-						either unit2 = 8 [
-        					pt64: as float-ptr! p
-        					pt64/value: -1.0
-   						 ][
-        					pt32: as float32-ptr! p
-        					pt32/value: as float32! -1.0
-    					]
-					]
-		mValueIN: mValueIN + unit1
-		mValueOUT: mValueOUT + unit2
-	]
+    mValueIN: vector/rs-head input
+    mTailIN: vector/rs-tail input
+    mValueOUT: vector/rs-head output
+    s: GET_BUFFER(input)
+    unit1: GET_UNIT(s)  
+    s: GET_BUFFER(output)
+    unit2: GET_UNIT(s)  
+    while [mValueIN < mTailIN] [
+        ; --- CORRECTION ICI ---
+        either ((vector/get-value-int as int-ptr! mValueIN unit1) = 1)  
+                    [
+                        p: mValueOUT
+                        either unit2 = 8 [
+                            pt64: as float-ptr! p
+                            pt64/value: 0.0
+                         ][
+                            pt32: as float32-ptr! p
+                            pt32/value: as float32! 0.0
+                        ]
+                    ] 
+                    [
+                        p: mValueOUT
+                        either unit2 = 8 [
+                            pt64: as float-ptr! p
+                            pt64/value: -1.0
+                         ][
+                            pt32: as float32-ptr! p
+                            pt32/value: as float32! -1.0
+                        ]
+                    ]
+        mValueIN: mValueIN + unit1
+        mValueOUT: mValueOUT + unit2
+    ]
 ]
-
 _testAndSet: routine [
-	output 		[vector!]
-	w 			[integer!] 
-	h 			[integer!] 
-	x 			[integer!] 
-	y 			[integer!] 
-	newvalue 	[float!]
-	/local
-		mvalueOUT ptr	[byte-ptr!]
-		f			[float!]
-		unit 	[integer!]
-		s			[series!]
-		p           [byte-ptr!]
-		pt64        [float-ptr!]
-    	pt32        [float32-ptr!]	
+    output      [vector!]
+    w           [integer!] 
+    h           [integer!] 
+    x           [integer!] 
+    y           [integer!] 
+    newvalue    [float!]
+    /local
+        mvalueOUT ptr   [byte-ptr!]
+        f           [float!]
+        unit    [integer!]
+        s           [series!]
+        p           [byte-ptr!]
+        pt64        [float-ptr!]
+        pt32        [float32-ptr!]  
 ][
-	mvalueOUT: vector/rs-head output
-	s: GET_BUFFER(output)
-	unit: GET_UNIT(s)	
-	if any [x < 0 x >= w] [exit]	;
-	if any [y < 0 y >= h] [exit]
-	ptr: mvalueOUT + (((y * w) + x) * unit)
-	f: vector/get-value-float  ptr unit
-	if all [f >= 0.0 f < newvalue] [exit] ; distance still processed -> exit
-	;rcvSetFloatValue  ptr newvalue unit
-	p: ptr
-	either unit = 8 [
+    mvalueOUT: vector/rs-head output
+    s: GET_BUFFER(output)
+    unit: GET_UNIT(s)   
+    if any [x < 0 x >= w] [exit]    
+    if any [y < 0 y >= h] [exit]
+    ptr: mvalueOUT + (((y * w) + x) * unit)
+    f: vector/get-value-float  ptr unit
+    if all [f >= 0.0 f < newvalue] [exit] ; distance still processed -> exit
+    
+    ; --- On remplace rcvSetFloatValue par l'écriture directe ---
+    p: ptr
+    either unit = 8 [
         pt64: as float-ptr! p
         pt64/value: newvalue
     ][
@@ -372,7 +379,6 @@ _testAndSet: routine [
         pt32/value: as float32! newvalue
     ]
 ]
-
 
 ; Functions and Compute Routine
 rcvChamferDistance: function [
@@ -391,7 +397,8 @@ rcvChamferCreateOutput: function [
 	mSize [pair!] 
 ][
 	n: mSize/x * mSize/y
-	make vector! reduce ['float! 64 n]
+	if n = 0 [return none]  ;-- protection
+	make vector! compose [float! 64 (n)]
 ]
 
 

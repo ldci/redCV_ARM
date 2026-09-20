@@ -505,7 +505,6 @@ runSnake: does [
 		snakeLoop
 		fTime/text: form round/to third (now/time/precise - t1) * 1000 0.01;--in msec
 		drawSnake
-		
 	]
 ]
 
@@ -566,7 +565,7 @@ view win: layout [
 	button "Load image" [loadImage]
 	fsize: field 100
 	
-	text "Number of Iterations" 
+	text "Number of Iterations" middle
 	maxIter: field 50 [
 			if error? try [maxIteration: to-integer face/text] [maxIteration: 512]
 	]
@@ -576,15 +575,15 @@ view win: layout [
 	button "Reset" [startSnake img0]
 	
 	button " Run Snake" [runSnake]
-	text "Rendered in " 
+	text "Rendered in " middle
 	ftime: field 120
 	button "Quit" [quitApp]
 	return
-	text 100 "Flow + Gradient"
+	text 100 "Flow + Gradient" middle
 	pad 282x0
-	text 100 "Snake iterations" 
+	text 100 "Snake iterations" middle
 	niter: field 50
-	text "Snake Size"
+	text "Snake Size" middle
 	snSize: field 50 
 	
 	return
@@ -599,13 +598,13 @@ view win: layout [
 	at 960x110 fgamma: field 70 center
 	at 1040x110 fdelta: field 70 center
 	
-	at 830x140  sa: slider 16x324 [sAlpha: 1.0 + to-float face/data * 9.0 falpha/text: form round/to sAlpha 0.01]
-	at 910X140  sb: slider 16x324 [sBeta:  1.0 + to-float face/data * 9.0 fbeta/text:  form round/to sBeta 0.01]
-	at 990x140  sg: slider 16x324 [sGamma: 1.0 + to-float face/data * 9.0 fgamma/text: form round/to sGamma 0.01]
-	at 1070x140 sd: slider 16x324 [sDelta: 1.0 + to-float face/data * 9.0 fdelta/text: form round/to sDelta 0.01]
+	at 830x140  sa: slider 25x324 [sAlpha: 1.0 + to-float face/data * 9.0 falpha/text: form round/to sAlpha 0.01]
+	at 910X140  sb: slider 25x324 [sBeta:  1.0 + to-float face/data * 9.0 fbeta/text:  form round/to sBeta 0.01]
+	at 990x140  sg: slider 25x324 [sGamma: 1.0 + to-float face/data * 9.0 fgamma/text: form round/to sGamma 0.01]
+	at 1070x140 sd: slider 25x324 [sDelta: 1.0 + to-float face/data * 9.0 fdelta/text: form round/to sDelta 0.01]
 	return
-	text "Gradient Threshold"
-	sl: slider 200 [
+	text "Gradient Threshold" middle
+	sl: slider 200x25 [
 		if isFile [
 			threshold: 1 + (to-integer face/data * 98)
 			fgt/text: form threshold
@@ -614,9 +613,9 @@ view win: layout [
 	]
 	fgt: field 40 "0" 
 	pad 40x0
-	text "Minimal Length"  
+	text "Minimal Length"  middle
 	fMinL: field 40 "8" [if error? try [minLen: to-integer fMinL/text] [minLen: 8]]
-	text "Maximal Length"  
+	text "Maximal Length" middle 
 	fMaxL: field 40 "16" [if error? try [maxLen: to-integer fMaxL/text] [maxLen: 16]]
 	
 	do [cb1/data: false maxIter/text: form maxIteration 
