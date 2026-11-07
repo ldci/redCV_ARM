@@ -2,7 +2,7 @@ Red [
 ]
 
 _sortPixels: func [bl][sort bl]
-_sortreversePixels: func [bl ][sort/reverse bl]
+_sortreversePixels: func [bl][sort/reverse bl]
 
 rcvSortImagebyX: routine [
 "Sorts image columns"
@@ -26,8 +26,8 @@ rcvSortImagebyX: routine [
 ][
 	handle1/value: as int-ptr! 0
     handleD/value: as int-ptr! 0
-    pix1: image/acquire-buffer src1 as ptr-ptr! :handle1
-    pixD: image/acquire-buffer dst as ptr-ptr! :handleD
+    pix1: image/acquire-buffer src1 :handle1
+    pixD: image/acquire-buffer dst :handleD
     w: IMAGE_WIDTH(src1/size)
     h: IMAGE_HEIGHT(src1/size)
     vBase: vector/rs-head b
@@ -78,8 +78,8 @@ rcvSortImagebyY: routine [
 ][
 	handle1/value: as int-ptr! 0
     handleD/value: as int-ptr! 0
-    pix1: image/acquire-buffer src1 as  ptr-ptr! :handle1
-    pixD: image/acquire-buffer dst  as ptr-ptr! :handleD
+    pix1: image/acquire-buffer src1 :handle1
+    pixD: image/acquire-buffer dst  :handleD
     w: IMAGE_WIDTH(src1/size)
     h: IMAGE_HEIGHT(src1/size)
     vBase: vector/rs-head b
@@ -131,8 +131,8 @@ rcvSortImagebyY: routine [
 ][
 	handle1/value: as int-ptr! 0
     handleD/value: as int-ptr! 0
-    pix1: image/acquire-buffer src1 as  ptr-ptr! :handle1
-    pixD: image/acquire-buffer dst  as ptr-ptr! :handleD
+    pix1: image/acquire-buffer src1 :handle1
+    pixD: image/acquire-buffer dst  :handleD
     w: IMAGE_WIDTH(src1/size)
     h: IMAGE_HEIGHT(src1/size)
     vBase: vector/rs-head b
